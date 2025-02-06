@@ -34,7 +34,7 @@ def login():
 
 @app.route("/callback")
 def callback():
-    """קליטת קוד ההתחברות והחזרת טוקן גישה"""
+    """קליטת קוד ההתחברות מה-Redirect של Spotify"""
     code = request.args.get("code")
     if not code:
         return "❌ Authentication failed!", 400
@@ -42,15 +42,21 @@ def callback():
     try:
         # קבלת טוקן גישה
         token_info = sp_oauth.get_access_token(code)
+        print(f"🔑 Token Info: {token_info}")  # הדפסת הטוקן לטרמינל
 
-        # שמירת הטוקן לקובץ `.cache`
-        with open(".spotipyauthcache", "w") as f:
+        # שמירת הטוקן לקובץ `.spotipyauthcache`
+        cache_path = os.path.join(os.getcwd(), ".spotipyauthcache")
+        with open(cache_path, "w") as f:
             f.write(str(token_info))
+
+        print(f"💾 Token saved to {cache_path}")  # אישור שנשמר
 
         return "✅ Authentication successful! You can close this window."
 
     except Exception as e:
+        print(f"❌ Authentication error: {str(e)}")
         return f"❌ Authentication error: {str(e)}", 500
+
 
 # 🔹 הפעלת השרת עם Gunicorn / Waitress
 if __name__ == "__main__":
