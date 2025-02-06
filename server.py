@@ -27,8 +27,9 @@ def home():
 
 @app.route("/login")
 def login():
-    """יצירת קישור התחברות ל-Spotify"""
+    """יצירת קישור כניסה ל-Spotify"""
     auth_url = sp_oauth.get_authorize_url()
+    print(f"🔗 Generated Auth URL: {auth_url}")  # הדפסת ה-URL ל-logs
     return redirect(auth_url)
 
 @app.route("/callback")
