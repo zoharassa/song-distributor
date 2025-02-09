@@ -12,12 +12,13 @@ SCOPE = "playlist-modify-public playlist-modify-private"
 # 🔹 יצירת Flask אפליקציה
 app = Flask(__name__)
 
-# 🔹 אתחול החיבור ל-Spotify API
+# 🔹 אתחול החיבור ל-Spotify API **ללא Cache כדי לאלץ התחברות מחדש**
 sp_oauth = SpotifyOAuth(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
     redirect_uri=SPOTIFY_REDIRECT_URI,
-    scope=SCOPE
+    scope=SCOPE,
+    cache_path=None  # ביטול שמירת Cache
 )
 
 @app.route("/")
@@ -50,12 +51,11 @@ def callback():
             print("❌ Token is empty! Something went wrong.")
             return "❌ Authentication failed: No token received.", 400
 
-        # שמירת הטוקן לקובץ `.spotipyauthcache`
-        cache_path = os.path.join(os.getcwd(), ".spotipyauthcache")
-        with open(cache_path, "w") as f:
-            f.write(str(token_info))
+        # ✅ שמירת הטוקן **למשתנה גלובלי במקום קובץ Cache**
+        global spotify_token
+        spotify_token = token_info["access_token"]
 
-        print(f"💾 Token saved to {cache_path}")  # אישור שהקובץ נוצר עם תוכן
+        print(f"💾 Token stored in memory!")  # אישור שהטוקן נשמר
 
         return "✅ Authentication successful! You can close this window."
 
@@ -67,20 +67,22 @@ def callback():
 def get_spotify_profile():
     """בודק אם אנחנו מחוברים ומחזיר את פרטי המשתמש"""
     try:
-        sp = spotipy.Spotify(auth_manager=sp_oauth)
+        if 'spotify_token' not in globals():
+            return "❌ No active session. Please log in again.", 401
+
+        sp = spotipy.Spotify(auth=spotify_token)
         user_info = sp.current_user()
         return f"✅ מחובר כ: {user_info['display_name']} ({user_info['id']})"
     except Exception as e:
         return f"❌ שגיאה בגישה ל-Spotify API: {str(e)}", 500
-
 
 # 🔹 הפעלת השרת עם Gunicorn / Waitress
 if __name__ == "__main__":
     try:
         from waitress import serve
         print("🚀 Running with Waitress")
-        serve(app, host="0.0.0.0", port=8080)
+        serve(app, host="0.0.0.0", port=5000)
+
     except ImportError:
         print("⚠ Waitress not found, running Flask default server")
         app.run(host="0.0.0.0", port=8080, debug=True)
-
