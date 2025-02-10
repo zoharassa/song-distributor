@@ -37,26 +37,33 @@ def login():
 
 @app.route("/callback")
 def callback():
-    """קליטת קוד ההתחברות והפעלה מחדש של session"""
+    """קליטת קוד ההתחברות מה-Redirect של Spotify"""
     code = request.args.get("code")
     if not code:
+        print("❌ No authorization code received!")
         return "❌ Authentication failed! No code received.", 400
 
     try:
-        print(f"🔄 Received auth code: {code}")
+        print(f"🔄 Received auth code: {code}")  # הדפסת הקוד שהתקבל
         token_info = sp_oauth.get_access_token(code)
-        print(f"🔑 Full Token Response: {token_info}")
-
+        print(f"🔑 Full Token Response: {token_info}")  # הדפסת כל המידע שהתקבל מ-Spotify
+        
         if not token_info or "access_token" not in token_info:
+            print("❌ Token is empty! Something went wrong.")
             return "❌ Authentication failed: No token received.", 400
 
-        # שמירת הטוקן בתוך session בלבד (לא בקובץ)
-        session["token_info"] = token_info
-        print("💾 Token saved in session!")
+        # **הדפסה נוספת לוודא שהטוקן אכן נוצר**
+        print(f"🔐 Access Token: {token_info['access_token']}")
+        print(f"🔄 Expires In: {token_info['expires_in']} seconds")
+
+        # שמירת הטוקן בזיכרון
+        global spotify_token
+        spotify_token = token_info["access_token"]
 
         return "✅ Authentication successful! You can close this window."
 
     except Exception as e:
+        print(f"❌ Authentication error: {str(e)}")
         return f"❌ Authentication error: {str(e)}", 500
 
 @app.route("/me")
