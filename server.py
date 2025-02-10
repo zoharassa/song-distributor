@@ -70,6 +70,14 @@ def get_spotify_profile():
     user_info = sp.current_user()
     return f"✅ מחובר כ: {user_info['display_name']} ({user_info['id']})"
 
+@app.route("/logout")
+def logout():
+    """התנתקות מהמערכת - איפוס ה-Session"""
+    session.clear()
+    print("🔴 User logged out. Session cleared.")
+    return "✅ Logged out! Please log in again."
+
+
 # 🔹 הפעלת השרת עם Gunicorn / Waitress
 if __name__ == "__main__":
     from waitress import serve
