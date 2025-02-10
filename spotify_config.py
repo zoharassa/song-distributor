@@ -6,7 +6,7 @@ import os
 # 🔹 פרטי החיבור ל-Spotify (יש לוודא שהתעדכנו בפורטל של Spotify Developers)
 SPOTIFY_CLIENT_ID = "3dee87c95878453cbf6b7c54a59e2a20"
 SPOTIFY_CLIENT_SECRET = "103c8fccc71e4acb8bcb2ffc8386b607"
-SPOTIFY_REDIRECT_URI = "https://fded-2a0d-6fc2-4260-ca00-952a-346c-5928-2e49.ngrok-free.app/callback"
+SPOTIFY_REDIRECT_URI = "https://songz-bot.onrender.com/callback"
 
 
 

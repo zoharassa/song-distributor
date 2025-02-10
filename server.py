@@ -2,6 +2,7 @@ from flask import Flask, request, redirect
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import os
+import json
 
 # 🔹 פרטי האימות של Spotify
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID", "66de8086ff0e443a92518ffff0805f5c")
@@ -9,16 +10,19 @@ SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET", "63ea9e2cb1564a939e76
 SPOTIFY_REDIRECT_URI = "https://songz-bot.onrender.com/callback"
 SCOPE = "playlist-modify-public playlist-modify-private"
 
+# 🔹 קובץ שמירת הטוקן
+CACHE_PATH = os.path.join(os.getcwd(), ".spotipyauthcache")
+
 # 🔹 יצירת Flask אפליקציה
 app = Flask(__name__)
 
-# 🔹 אתחול החיבור ל-Spotify API **ללא Cache כדי לאלץ התחברות מחדש**
+# 🔹 אתחול החיבור ל-Spotify API עם Cache מוגדר
 sp_oauth = SpotifyOAuth(
     client_id=SPOTIFY_CLIENT_ID,
     client_secret=SPOTIFY_CLIENT_SECRET,
     redirect_uri=SPOTIFY_REDIRECT_URI,
     scope=SCOPE,
-    cache_path=None  # ביטול שמירת Cache
+    cache_path=CACHE_PATH  # שמירה בקובץ
 )
 
 @app.route("/")
@@ -51,11 +55,17 @@ def callback():
             print("❌ Token is empty! Something went wrong.")
             return "❌ Authentication failed: No token received.", 400
 
-        # ✅ שמירת הטוקן **למשתנה גלובלי במקום קובץ Cache**
-        global spotify_token
-        spotify_token = token_info["access_token"]
+        # ✅ שמירת הטוקן **בקובץ Cache**
+        cache_path = os.path.join(os.getcwd(), ".spotipyauthcache")
+        print(f"📂 Saving token to: {cache_path}")  # הדפסת הנתיב לטרמינל
 
-        print(f"💾 Token stored in memory!")  # אישור שהטוקן נשמר
+        try:
+            with open(cache_path, "w") as f:
+                json.dump(token_info, f)
+            print(f"💾 Token saved successfully to {cache_path}")  # אישור שהטוקן נשמר
+        except Exception as e:
+            print(f"❌ ERROR: Failed to save token - {str(e)}")  # הדפסת השגיאה
+            return f"❌ ERROR: Failed to save token - {str(e)}", 500
 
         return "✅ Authentication successful! You can close this window."
 
@@ -63,14 +73,18 @@ def callback():
         print(f"❌ Authentication error: {str(e)}")
         return f"❌ Authentication error: {str(e)}", 500
 
+
 @app.route("/me")
 def get_spotify_profile():
     """בודק אם אנחנו מחוברים ומחזיר את פרטי המשתמש"""
     try:
-        if 'spotify_token' not in globals():
+        if not os.path.exists(CACHE_PATH):
             return "❌ No active session. Please log in again.", 401
 
-        sp = spotipy.Spotify(auth=spotify_token)
+        with open(CACHE_PATH, "r") as f:
+            token_info = json.load(f)
+
+        sp = spotipy.Spotify(auth=token_info["access_token"])
         user_info = sp.current_user()
         return f"✅ מחובר כ: {user_info['display_name']} ({user_info['id']})"
     except Exception as e:
@@ -81,8 +95,9 @@ if __name__ == "__main__":
     try:
         from waitress import serve
         print("🚀 Running with Waitress")
-        serve(app, host="0.0.0.0", port=5000)
-
+        serve(app, host="0.0.0.0", port=8080)
     except ImportError:
         print("⚠ Waitress not found, running Flask default server")
         app.run(host="0.0.0.0", port=8080, debug=True)
+
+
